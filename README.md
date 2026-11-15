@@ -1,0 +1,297 @@
+# IA SDLC — Backend (Entrega 1)
+
+Backend de la aplicación **IA SDLC**: por cada fase del proceso de desarrollo un agente de IA propone un
+artefacto y una persona con cierto rol lo aprueba (gate).
+
+Alcance de la entrega 1:
+
+- Usuarios con registro y login (JWT).
+- Squads con integrantes y roles (titular o suplente).
+- Catálogo de agentes con versiones.
+- Proyectos con historias de usuario.
+- Fase 1 (`REQUIREMENTS`): el agente de refinamiento se ejecuta sobre las historias del proyecto, el resultado
+  queda pendiente de aprobación del Product Owner del squad y se registra la decisión del gate.
+
+El contrato REST que implementa está en [`specs/contrato-api.md`](specs/contrato-api.md) y es el mismo que usa
+el frontend.
+
+> **Estado de verificación.** En el ambiente donde se generó este código no había acceso a Maven Central
+> (el proxy de red bloquea `repo.maven.apache.org`), así que **no se pudo ejecutar `mvn verify` ni arrancar la
+> aplicación**. Sí se verificó: la compilación con `javac` del dominio, la capa de aplicación, el runner
+> simulado y los DTO/mappers web; el flujo de negocio completo de los casos de uso con repositorios en
+> memoria; y las migraciones SQL contra un PostgreSQL 16 real. Las entidades JPA, la seguridad, los
+> controladores y las pruebas JUnit **no se han compilado ni ejecutado**: el primer paso en un ambiente con
+> acceso a Maven Central es correr `mvn verify`.
+
+## Requisitos
+
+- Java 21
+- Maven 3.9 o superior (el proyecto no incluye Maven Wrapper; ver "Pendientes")
+
+## Cómo correrla
+
+```bash
+mvn verify                 # compila y corre las pruebas
+mvn spring-boot:run        # arranca en http://localhost:8080 con H2 en memoria
+```
+
+Con el perfil por defecto no hay que instalar nada: usa H2 en memoria y Flyway crea el esquema y los datos
+semilla al arrancar. Los datos se pierden al detener la aplicación.
+
+## Perfiles y configuración
+
+| Perfil | Base de datos | Cómo se activa |
+|---|---|---|
+| (por defecto) | H2 en memoria, modo PostgreSQL | sin configuración |
+| `postgres` | PostgreSQL | `SPRING_PROFILES_ACTIVE=postgres` |
+
+Variables de entorno:
+
+| Variable | Uso | Valor por defecto |
+|---|---|---|
+| `PORT` | Puerto HTTP | `8080` |
+| `IASDLC_JWT_SECRET` | Secreto para firmar los JWT (mínimo 32 caracteres) | un valor solo para desarrollo |
+| `IASDLC_JWT_EXPIRATION_MINUTES` | Vigencia del token | `480` |
+| `IASDLC_CORS_ALLOWED_ORIGINS` | Orígenes permitidos por CORS (separados por coma) | `http://localhost:5173` |
+| `IASDLC_DB_URL` | URL JDBC (perfil `postgres`) | `jdbc:postgresql://localhost:5432/iasdlc` |
+| `IASDLC_DB_USERNAME` | Usuario (perfil `postgres`) | `iasdlc` |
+| `IASDLC_DB_PASSWORD` | Contraseña (perfil `postgres`) | `iasdlc` |
+
+Ejemplo con PostgreSQL:
+
+```bash
+export SPRING_PROFILES_ACTIVE=postgres
+export IASDLC_DB_URL=jdbc:postgresql://localhost:5432/iasdlc
+export IASDLC_DB_USERNAME=iasdlc
+export IASDLC_DB_PASSWORD=********
+export IASDLC_JWT_SECRET='un-secreto-largo-de-al-menos-32-caracteres'
+mvn spring-boot:run
+```
+
+Las migraciones (`src/main/resources/db/migration`) usan SQL compatible con H2 y PostgreSQL. El secreto JWT
+por defecto es público: en cualquier ambiente que no sea de desarrollo hay que definir `IASDLC_JWT_SECRET`.
+
+### Datos semilla
+
+- Las 5 fases: `REQUIREMENTS` (Product Owner), `ANALYSIS` (Tech Lead), `DESIGN` (Architect),
+  `CONSTRUCTION` (Developer) y `TESTING` (QA).
+- El **Agente de refinamiento**: fase `REQUIREMENTS`, estado `PILOT`, versión `0.1.0` con instrucciones de
+  ejemplo. No tiene responsable (`owner` es `null`) porque no hay usuarios semilla.
+
+No hay usuarios semilla: el flujo de prueba empieza registrando usuarios.
+
+## Flujo de prueba con curl
+
+Requiere `jq` para extraer valores de las respuestas.
+
+```bash
+API=http://localhost:8080/api/v1
+JSON='Content-Type: application/json'
+
+# 1. Registrar dos usuarios: la Product Owner y un desarrollador
+PO=$(curl -s -X POST $API/auth/register -H "$JSON" \
+  -d '{"fullName":"Ana Product Owner","email":"ana@example.com","password":"secreto123"}')
+DEV=$(curl -s -X POST $API/auth/register -H "$JSON" \
+  -d '{"fullName":"Luis Developer","email":"luis@example.com","password":"secreto123"}')
+PO_TOKEN=$(echo "$PO" | jq -r .token);   PO_ID=$(echo "$PO" | jq -r .user.id)
+DEV_TOKEN=$(echo "$DEV" | jq -r .token); DEV_ID=$(echo "$DEV" | jq -r .user.id)
+
+# Login (devuelve un token nuevo) y fases semilla
+curl -s -X POST $API/auth/login -H "$JSON" -d '{"email":"ana@example.com","password":"secreto123"}' | jq .
+curl -s $API/phases -H "Authorization: Bearer $PO_TOKEN" | jq .
+
+# 2. Crear el squad y agregar a la Product Owner
+SQUAD_ID=$(curl -s -X POST $API/squads -H "$JSON" -H "Authorization: Bearer $PO_TOKEN" \
+  -d '{"name":"Squad Cuentas"}' | jq -r .id)
+curl -s -X POST $API/squads/$SQUAD_ID/members -H "$JSON" -H "Authorization: Bearer $PO_TOKEN" \
+  -d "{\"userId\":\"$PO_ID\",\"role\":\"PRODUCT_OWNER\",\"substitute\":false}" | jq .
+
+# 3. Crear el proyecto y agregar dos historias
+PROJECT_ID=$(curl -s -X POST $API/projects -H "$JSON" -H "Authorization: Bearer $DEV_TOKEN" \
+  -d "{\"name\":\"Apertura de cuenta digital\",\"description\":\"Piloto\",\"squadId\":\"$SQUAD_ID\"}" | jq -r .id)
+curl -s -X POST $API/projects/$PROJECT_ID/stories -H "$JSON" -H "Authorization: Bearer $DEV_TOKEN" \
+  -d '{"title":"Consultar saldo","description":"Como cliente del banco, quiero consultar el saldo de mi cuenta para saber cuánto dinero tengo disponible.","origin":"EXISTING"}' | jq .
+curl -s -X POST $API/projects/$PROJECT_ID/stories -H "$JSON" -H "Authorization: Bearer $DEV_TOKEN" \
+  -d '{"title":"Exportar movimientos","description":"Debe ser rápido","origin":"ASSISTED"}' | jq .
+
+# 4. Ejecutar la fase 1: la respuesta llega en PENDING_APPROVAL
+EXECUTION_ID=$(curl -s -X POST $API/projects/$PROJECT_ID/phases/REQUIREMENTS/executions \
+  -H "Authorization: Bearer $DEV_TOKEN" | jq -r .id)
+
+# 5. Bandeja de la Product Owner
+curl -s $API/approvals/pending -H "Authorization: Bearer $PO_TOKEN" | jq .
+
+# 6. Quien no es aprobador recibe 403 NOT_GATE_APPROVER
+curl -s -X POST $API/executions/$EXECUTION_ID/decision -H "$JSON" -H "Authorization: Bearer $DEV_TOKEN" \
+  -d '{"decision":"APPROVE"}' | jq .
+
+# 7. La Product Owner aprueba y el proyecto pasa a ANALYSIS
+curl -s -X POST $API/executions/$EXECUTION_ID/decision -H "$JSON" -H "Authorization: Bearer $PO_TOKEN" \
+  -d '{"decision":"APPROVE","comment":"Listo para análisis"}' | jq .
+curl -s $API/projects/$PROJECT_ID -H "Authorization: Bearer $PO_TOKEN" | jq '{currentPhase, journey}'
+```
+
+## Estructura hexagonal
+
+Paquete base `com.iasdlc`. Las dependencias apuntan siempre hacia adentro:
+`infrastructure -> application -> domain`.
+
+```
+com.iasdlc
+├── domain                      Reglas de negocio puras (sin Spring ni JPA)
+│   ├── model                   User, Squad, Phase, Agent, Project, Story, Execution, enums…
+│   ├── service                 GatePolicy (quién aprueba), GateDecisionService (efecto de la decisión)
+│   └── exception               DomainException + ErrorCode (códigos del contrato)
+├── application                 Orquestación
+│   ├── port.in                 Casos de uso (interfaces que usa la capa web)
+│   ├── port.out                Repositorios, PasswordHasher, TokenIssuer y AgentRunner
+│   ├── usecase                 Implementación de los casos de uso
+│   └── view                    Modelos de lectura que devuelven los casos de uso
+└── infrastructure              Adaptadores
+    ├── web                     controller, dto, mapper, error (@RestControllerAdvice)
+    ├── persistence             entity (JPA + mapper), repository (Spring Data), adapter (puertos de salida)
+    ├── security                JWT, filtro de autenticación, BCrypt, CORS
+    ├── agent                   Adaptadores de AgentRunner (hoy: SimulatedAgentRunner)
+    └── config                  Registro de los casos de uso y reloj
+```
+
+Notas de diseño:
+
+- El **dominio** no importa nada de Spring ni de JPA. Las reglas están en los agregados (`Project`,
+  `Execution`, `Squad`, `Agent`) y en los servicios de dominio, y son las que cubren las pruebas unitarias.
+- La **capa de aplicación** solo depende del dominio y de sus puertos. Los casos de uso se marcan con la
+  anotación propia `@UseCase` (la infraestructura los registra como beans en `UseCaseConfig`). La única
+  dependencia de Spring en esta capa es `@Transactional`, una concesión práctica para delimitar la
+  transacción en el caso de uso.
+- La **persistencia** guarda cada agregado completo (el squad con sus integrantes, el proyecto con sus
+  historias y el avance por fase). El resultado del agente se guarda como JSON en la ejecución, sin llave
+  foránea a las historias, para que el registro histórico no cambie si después se borra una historia.
+- Las **ejecuciones y decisiones** no se editan ni se borran: no hay rutas ni métodos de repositorio para
+  hacerlo, y una ejecución decidida rechaza una segunda decisión.
+
+## El puerto `AgentRunner`
+
+Es el punto de extensión del motor de agentes (`application.port.out`):
+
+```java
+public interface AgentRunner {
+    AgentOutput run(AgentDefinition agent, AgentInput input);
+}
+```
+
+- `AgentDefinition`: el agente y su versión vigente (nombre, fase, versión, `instructions` — el texto del
+  `agent.md` — y la ubicación en el repositorio).
+- `AgentInput`: el proyecto y sus historias (id, título, descripción).
+- `AgentOutput`: una `RefinedStory` por cada historia (`title`, `asA`, `iWant`, `soThat`,
+  `acceptanceCriteria`, `ambiguities`).
+- Si el motor no puede producir un resultado lanza `AgentRunnerException`: la ejecución queda `FAILED` y la
+  fase sigue `IN_PROGRESS` para reintentar. También queda `FAILED` si la salida no trae resultado para
+  alguna historia.
+
+El caso de uso `ExecutionService` elige el agente de la fase (en `PILOT` o `ACTIVE` con versión vigente;
+si hay varios prefiere `ACTIVE`), arma la entrada, llama al puerto y guarda la ejecución. No sabe qué motor
+hay detrás.
+
+### Adaptador de esta entrega: `SimulatedAgentRunner`
+
+Determinista y sin red. Para cada historia:
+
+- limpia el título;
+- busca el actor (`como …`), la necesidad (`quiero/necesito/deseo …`) y el beneficio (`para …`) en la
+  descripción; si no los encuentra usa un valor por defecto;
+- genera 3 criterios de aceptación en formato Dado / Cuando / Entonces (camino feliz, error y trazabilidad);
+- lista ambigüedades: sin descripción o descripción corta, actor no identificado, beneficio no explícito y
+  términos subjetivos ("rápido", "fácil"…).
+
+No interpreta las instrucciones del agente. Se selecciona con la propiedad:
+
+```yaml
+iasdlc:
+  agent:
+    runner: simulated
+```
+
+### Cómo agregar otro adaptador (por ejemplo, GitHub Copilot SDK para Java)
+
+1. Agregar la dependencia del SDK al `pom.xml`.
+2. Crear la clase en `com.iasdlc.infrastructure.agent`, por ejemplo:
+
+   ```java
+   @Component
+   @ConditionalOnProperty(name = "iasdlc.agent.runner", havingValue = "copilot")
+   public class CopilotAgentRunner implements AgentRunner {
+
+       @Override
+       public AgentOutput run(AgentDefinition agent, AgentInput input) {
+           // 1. Abrir una sesión con el motor usando agent.instructions() como instrucciones del agente.
+           // 2. Enviar las historias de input.stories() y pedir la respuesta en un formato estructurado.
+           // 3. Convertir la respuesta a AgentOutput (una RefinedStory por storyId).
+           // 4. Ante cualquier falla (red, tiempo de espera, respuesta inválida) lanzar AgentRunnerException.
+       }
+   }
+   ```
+
+3. Agregar su configuración (credenciales, modelo, tiempos de espera) bajo `iasdlc.agent.copilot.*`, leída
+   desde variables de entorno.
+4. Activarlo con `iasdlc.agent.runner=copilot`.
+
+No hay que tocar `domain` ni `application`. Dos puntos a tener en cuenta cuando el motor sea real:
+
+- Hoy la ejecución es síncrona y ocurre dentro de la transacción del caso de uso. Con un motor lento conviene
+  pasar a ejecución asíncrona (el estado `RUNNING` ya existe) para no mantener la transacción abierta.
+- Si el valor de `iasdlc.agent.runner` no corresponde a ningún adaptador, la aplicación no arranca (falta el
+  bean de `AgentRunner`), lo que evita ejecutar con un motor distinto al esperado.
+
+## Reglas de negocio implementadas
+
+- Un proyecto nuevo arranca en `REQUIREMENTS` / `IN_PROGRESS`; las demás fases quedan `PENDING`.
+- Solo se agregan o borran historias mientras `REQUIREMENTS` esté `IN_PROGRESS`.
+- Ejecutar la fase: `NO_STORIES`, `AGENT_NOT_AVAILABLE`, `PHASE_AWAITING_GATE`, `PHASE_ALREADY_APPROVED`.
+- El aprobador de una fase es un integrante del squad del proyecto con el rol `approverRole` de la fase,
+  titular o suplente. Otro usuario recibe 403 `NOT_GATE_APPROVER`.
+- `APPROVE`: ejecución `ACCEPTED`, fase `APPROVED`, el proyecto pasa a `ANALYSIS` (`IN_PROGRESS`).
+- `REQUEST_REWORK` / `REJECT` exigen comentario; la fase vuelve a `IN_PROGRESS`.
+- `story.refined` refleja la última ejecución no rechazada: una ejecución pendiente, aceptada o con
+  reproceso deja su propuesta en las historias; al rechazar se restaura la propuesta de la ejecución válida
+  anterior o queda `null` si no hay.
+- Un usuario puede estar en varios squads y tener varios roles en un squad, pero cada rol una sola vez.
+
+## Decisiones donde el contrato no era explícito
+
+| Tema | Decisión |
+|---|---|
+| Usuario con el mismo rol dos veces en un squad | 409 con código **`DUPLICATE_MEMBER`** (código nuevo, no está en el contrato) |
+| `owner` del agente semilla | `null` (no hay usuarios semilla) |
+| `ownerUserId` al crear un agente | Opcional; si no llega, el responsable es quien crea el agente |
+| `instructions` de las versiones | Se omite en `GET /agents`; se incluye en las respuestas de un agente individual (`GET`, `POST`, `PATCH`) |
+| Versión repetida en un agente | 409 `DUPLICATE_NAME` |
+| Nombre repetido de squad, proyecto o agente | 409 `DUPLICATE_NAME` (sin distinguir mayúsculas) |
+| Agregar/borrar historias fuera de `IN_PROGRESS` | 409 `PHASE_AWAITING_GATE` o `PHASE_ALREADY_APPROVED` según el estado |
+| Ejecutar una fase distinta de `REQUIREMENTS` | 400 `VALIDATION_ERROR` |
+| Ejecución `FAILED` | Responde 201 con `status: FAILED`; la fase sigue `IN_PROGRESS`. El motivo se guarda pero no se expone (el contrato no tiene ese campo) |
+| Decidir una ejecución `FAILED` | 409 `EXECUTION_ALREADY_DECIDED` |
+| Orden de validación al decidir | Primero el aprobador (403), luego el estado (409) y el comentario (400) |
+| `details` del error | Lista de textos `"campo: mensaje"` en los errores de validación; vacía en los demás |
+| Contraseña | Entre 8 y 72 caracteres |
+| `substitute` al agregar integrante | Opcional; por defecto `false` |
+| Token de un usuario que ya no existe | 401 `UNAUTHORIZED` (pasa al reiniciar con H2 en memoria) |
+| Permisos | Cualquier usuario autenticado puede crear squads, agentes y proyectos, y ejecutar la fase; solo el gate valida rol |
+| Errores fuera del contrato | 405 `METHOD_NOT_ALLOWED`, 415 `UNSUPPORTED_MEDIA_TYPE`, 500 `INTERNAL_ERROR`, con la misma forma |
+
+## Pruebas
+
+- Unitarias de dominio (`src/test/java/com/iasdlc/domain`): proyecto, ejecución, gate, squad y agente.
+- Unitaria del runner simulado (`infrastructure/agent`).
+- Integración con MockMvc y H2 (`infrastructure/web/RequirementsFlowIntegrationTest`): registra dos usuarios,
+  crea squad, agrega la Product Owner, crea proyecto, agrega 2 historias, ejecuta la fase 1, verifica
+  `PENDING_APPROVAL` y la bandeja, comprueba el 403 del no aprobador, aprueba y verifica que el proyecto pasa
+  a `ANALYSIS`. Una segunda prueba cubre datos semilla, catálogo de agentes y forma de los errores.
+
+## Pendientes
+
+- Ejecutar `mvn verify` y arrancar la aplicación en un ambiente con acceso a Maven Central (ver "Estado de
+  verificación").
+- Generar el Maven Wrapper: `mvn -N wrapper:wrapper`.
+- Probar el perfil `postgres` con la aplicación completa (las migraciones sí se probaron contra PostgreSQL).
+- Sin control de concurrencia optimista: dos ejecuciones simultáneas del mismo proyecto podrían pasar ambas la
+  validación.

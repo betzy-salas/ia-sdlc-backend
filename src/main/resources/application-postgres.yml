@@ -1,0 +1,7 @@
+# Perfil "postgres": se activa con SPRING_PROFILES_ACTIVE=postgres y se configura por variables de entorno.
+spring:
+  datasource:
+    url: ${IASDLC_DB_URL:jdbc:postgresql://localhost:5432/iasdlc}
+    username: ${IASDLC_DB_USERNAME:iasdlc}
+    password: ${IASDLC_DB_PASSWORD:iasdlc}
+    driver-class-name: org.postgresql.Driver

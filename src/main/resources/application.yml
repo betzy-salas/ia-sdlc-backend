@@ -1,0 +1,31 @@
+# Perfil por defecto: H2 en memoria (modo PostgreSQL). No requiere instalar nada.
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: ia-sdlc-backend
+  datasource:
+    url: jdbc:h2:mem:iasdlc;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    open-in-view: false
+    hibernate:
+      # El esquema lo administra Flyway.
+      ddl-auto: none
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+iasdlc:
+  agent:
+    # Adaptador del puerto AgentRunner. En esta entrega solo existe "simulated".
+    runner: simulated
+  security:
+    jwt:
+      # Solo para desarrollo. En cualquier otro ambiente defina IASDLC_JWT_SECRET (mínimo 32 caracteres).
+      secret: ${IASDLC_JWT_SECRET:solo-para-desarrollo-cambiar-este-secreto-0123456789}
+      expiration-minutes: ${IASDLC_JWT_EXPIRATION_MINUTES:480}
+  cors:
+    allowed-origins: ${IASDLC_CORS_ALLOWED_ORIGINS:http://localhost:5173}
