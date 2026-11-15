@@ -1,0 +1,24 @@
+# PostgreSQL para desarrollo local.
+#   docker compose up -d      # levantar
+#   docker compose down       # detener (conserva los datos)
+#   docker compose down -v    # detener y borrar los datos
+services:
+  postgres:
+    image: postgres:16
+    container_name: iasdlc-postgres
+    environment:
+      POSTGRES_DB: iasdlc
+      POSTGRES_USER: iasdlc
+      POSTGRES_PASSWORD: iasdlc
+    ports:
+      - "5432:5432"
+    volumes:
+      - iasdlc-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iasdlc -d iasdlc"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  iasdlc-pgdata:

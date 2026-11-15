@@ -1,4 +1,4 @@
-# Perfil por defecto: H2 en memoria (modo PostgreSQL). No requiere instalar nada.
+# Base de datos: PostgreSQL. Para desarrollo local, levántala con `docker compose up -d`.
 server:
   port: ${PORT:8080}
 
@@ -6,9 +6,10 @@ spring:
   application:
     name: ia-sdlc-backend
   datasource:
-    url: jdbc:h2:mem:iasdlc;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
-    username: sa
-    password: ""
+    url: ${IASDLC_DB_URL:jdbc:postgresql://localhost:5432/iasdlc}
+    username: ${IASDLC_DB_USERNAME:iasdlc}
+    password: ${IASDLC_DB_PASSWORD:iasdlc}
+    driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
     hibernate:

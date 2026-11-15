@@ -27,49 +27,48 @@ el frontend.
 
 - Java 21
 - Maven 3.9 o superior (el proyecto no incluye Maven Wrapper; ver "Pendientes")
+- PostgreSQL 16. Lo más simple es Docker con el `docker-compose.yml` del proyecto
 
 ## Cómo correrla
 
 ```bash
+docker compose up -d       # levanta PostgreSQL en localhost:5432 (base, usuario y clave: iasdlc)
 mvn verify                 # compila y corre las pruebas
-mvn spring-boot:run        # arranca en http://localhost:8080 con H2 en memoria
+mvn spring-boot:run        # arranca en http://localhost:8080
 ```
 
-Con el perfil por defecto no hay que instalar nada: usa H2 en memoria y Flyway crea el esquema y los datos
-semilla al arrancar. Los datos se pierden al detener la aplicación.
+La aplicación usa PostgreSQL. Flyway crea el esquema y los datos semilla al arrancar, y los datos se
+conservan entre reinicios. Para empezar de cero: `docker compose down -v` y luego `docker compose up -d`.
 
-## Perfiles y configuración
+Sin Docker, con un PostgreSQL ya instalado:
 
-| Perfil | Base de datos | Cómo se activa |
-|---|---|---|
-| (por defecto) | H2 en memoria, modo PostgreSQL | sin configuración |
-| `postgres` | PostgreSQL | `SPRING_PROFILES_ACTIVE=postgres` |
+```sql
+CREATE USER iasdlc WITH PASSWORD 'iasdlc';
+CREATE DATABASE iasdlc OWNER iasdlc;
+```
+
+## Configuración
+
+| Uso | Base de datos |
+|---|---|
+| Aplicación (`mvn spring-boot:run`) | PostgreSQL |
+| Pruebas (`mvn test`, `mvn verify`) | H2 en memoria, modo PostgreSQL (`src/test/resources/application.yml`); no necesitan PostgreSQL |
 
 Variables de entorno:
 
 | Variable | Uso | Valor por defecto |
 |---|---|---|
 | `PORT` | Puerto HTTP | `8080` |
+| `IASDLC_DB_URL` | URL JDBC | `jdbc:postgresql://localhost:5432/iasdlc` |
+| `IASDLC_DB_USERNAME` | Usuario de la base de datos | `iasdlc` |
+| `IASDLC_DB_PASSWORD` | Contraseña de la base de datos | `iasdlc` |
 | `IASDLC_JWT_SECRET` | Secreto para firmar los JWT (mínimo 32 caracteres) | un valor solo para desarrollo |
 | `IASDLC_JWT_EXPIRATION_MINUTES` | Vigencia del token | `480` |
 | `IASDLC_CORS_ALLOWED_ORIGINS` | Orígenes permitidos por CORS (separados por coma) | `http://localhost:5173` |
-| `IASDLC_DB_URL` | URL JDBC (perfil `postgres`) | `jdbc:postgresql://localhost:5432/iasdlc` |
-| `IASDLC_DB_USERNAME` | Usuario (perfil `postgres`) | `iasdlc` |
-| `IASDLC_DB_PASSWORD` | Contraseña (perfil `postgres`) | `iasdlc` |
 
-Ejemplo con PostgreSQL:
-
-```bash
-export SPRING_PROFILES_ACTIVE=postgres
-export IASDLC_DB_URL=jdbc:postgresql://localhost:5432/iasdlc
-export IASDLC_DB_USERNAME=iasdlc
-export IASDLC_DB_PASSWORD=********
-export IASDLC_JWT_SECRET='un-secreto-largo-de-al-menos-32-caracteres'
-mvn spring-boot:run
-```
-
-Las migraciones (`src/main/resources/db/migration`) usan SQL compatible con H2 y PostgreSQL. El secreto JWT
-por defecto es público: en cualquier ambiente que no sea de desarrollo hay que definir `IASDLC_JWT_SECRET`.
+Las migraciones (`src/main/resources/db/migration`) usan SQL compatible con PostgreSQL y con H2. La clave de
+la base de datos y el secreto JWT por defecto son solo para desarrollo: en cualquier otro ambiente hay que
+definir `IASDLC_DB_PASSWORD` e `IASDLC_JWT_SECRET`.
 
 ### Datos semilla
 
@@ -274,7 +273,7 @@ No hay que tocar `domain` ni `application`. Dos puntos a tener en cuenta cuando 
 | `details` del error | Lista de textos `"campo: mensaje"` en los errores de validación; vacía en los demás |
 | Contraseña | Entre 8 y 72 caracteres |
 | `substitute` al agregar integrante | Opcional; por defecto `false` |
-| Token de un usuario que ya no existe | 401 `UNAUTHORIZED` (pasa al reiniciar con H2 en memoria) |
+| Token de un usuario que ya no existe | 401 `UNAUTHORIZED` (por ejemplo, tras recrear la base de datos) |
 | Permisos | Cualquier usuario autenticado puede crear squads, agentes y proyectos, y ejecutar la fase; solo el gate valida rol |
 | Errores fuera del contrato | 405 `METHOD_NOT_ALLOWED`, 415 `UNSUPPORTED_MEDIA_TYPE`, 500 `INTERNAL_ERROR`, con la misma forma |
 
@@ -292,6 +291,6 @@ No hay que tocar `domain` ni `application`. Dos puntos a tener en cuenta cuando 
 - Ejecutar `mvn verify` y arrancar la aplicación en un ambiente con acceso a Maven Central (ver "Estado de
   verificación").
 - Generar el Maven Wrapper: `mvn -N wrapper:wrapper`.
-- Probar el perfil `postgres` con la aplicación completa (las migraciones sí se probaron contra PostgreSQL).
+- Probar la aplicación completa contra PostgreSQL (las migraciones sí se probaron contra PostgreSQL 16).
 - Sin control de concurrencia optimista: dos ejecuciones simultáneas del mismo proyecto podrían pasar ambas la
   validación.

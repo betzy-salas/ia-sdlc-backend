@@ -51,11 +51,11 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
-        <!-- Bases de datos: H2 para el perfil por defecto, PostgreSQL para el perfil "postgres" -->
+        <!-- Bases de datos: PostgreSQL para la aplicación; H2 en memoria solo para las pruebas -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <scope>runtime</scope>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
