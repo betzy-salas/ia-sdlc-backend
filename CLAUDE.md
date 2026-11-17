@@ -18,7 +18,7 @@ Este repositorio es el back. El front está en el repositorio hermano `ia-sdlc-f
 ## Comandos
 
 ```bash
-docker compose up -d        # PostgreSQL local (base, usuario y clave: iasdlc)
+docker compose up -d        # PostgreSQL local en el puerto 5433 (base, usuario y clave: iasdlc)
 mvn verify                  # compila y corre las pruebas (usan H2 en memoria)
 mvn spring-boot:run         # http://localhost:8080
 docker compose down -v      # borra la base; necesario si cambia V1__schema.sql

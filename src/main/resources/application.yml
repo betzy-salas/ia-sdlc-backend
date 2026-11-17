@@ -6,7 +6,7 @@ spring:
   application:
     name: ia-sdlc-backend
   datasource:
-    url: ${IASDLC_DB_URL:jdbc:postgresql://localhost:5432/iasdlc}
+    url: ${IASDLC_DB_URL:jdbc:postgresql://localhost:5433/iasdlc}
     username: ${IASDLC_DB_USERNAME:iasdlc}
     password: ${IASDLC_DB_PASSWORD:iasdlc}
     driver-class-name: org.postgresql.Driver

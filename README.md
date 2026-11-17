@@ -45,7 +45,7 @@ el frontend.
 ## Cómo correrla
 
 ```bash
-docker compose up -d       # levanta PostgreSQL en localhost:5432 (base, usuario y clave: iasdlc)
+docker compose up -d       # levanta PostgreSQL en localhost:5433 (base, usuario y clave: iasdlc)
 mvn verify                 # compila y corre las pruebas
 mvn spring-boot:run        # arranca en http://localhost:8080
 ```
@@ -65,6 +65,8 @@ CREATE USER iasdlc WITH PASSWORD 'iasdlc';
 CREATE DATABASE iasdlc OWNER iasdlc;
 ```
 
+En ese caso indica su dirección con `IASDLC_DB_URL`, por ejemplo `jdbc:postgresql://localhost:5432/iasdlc`.
+
 ## Configuración
 
 | Uso | Base de datos |
@@ -77,7 +79,7 @@ Variables de entorno:
 | Variable | Uso | Valor por defecto |
 |---|---|---|
 | `PORT` | Puerto HTTP | `8080` |
-| `IASDLC_DB_URL` | URL JDBC | `jdbc:postgresql://localhost:5432/iasdlc` |
+| `IASDLC_DB_URL` | URL JDBC | `jdbc:postgresql://localhost:5433/iasdlc` |
 | `IASDLC_DB_USERNAME` | Usuario de la base de datos | `iasdlc` |
 | `IASDLC_DB_PASSWORD` | Contraseña de la base de datos | `iasdlc` |
 | `IASDLC_JWT_SECRET` | Secreto para firmar los JWT (mínimo 32 caracteres) | un valor solo para desarrollo |
