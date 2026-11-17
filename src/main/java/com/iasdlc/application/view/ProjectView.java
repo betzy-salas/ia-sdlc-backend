@@ -5,5 +5,6 @@ import com.iasdlc.domain.model.Squad;
 
 import java.util.List;
 
-public record ProjectView(Project project, Squad squad, List<PhaseStepView> journey) {
+/** Proyecto con su squad y sus iniciativas (en forma de resumen, sin recorrido). */
+public record ProjectView(Project project, Squad squad, List<InitiativeView> initiatives) {
 }

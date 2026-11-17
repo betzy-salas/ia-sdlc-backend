@@ -20,8 +20,8 @@ public class ExecutionEntity {
     @Id
     UUID id;
 
-    @Column(name = "project_id", nullable = false, updatable = false)
-    UUID projectId;
+    @Column(name = "initiative_id", nullable = false, updatable = false)
+    UUID initiativeId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "phase_code", nullable = false, updatable = false)

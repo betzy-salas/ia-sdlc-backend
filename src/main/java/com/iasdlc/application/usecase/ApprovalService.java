@@ -3,6 +3,7 @@ package com.iasdlc.application.usecase;
 import com.iasdlc.application.UseCase;
 import com.iasdlc.application.port.in.ApprovalUseCase;
 import com.iasdlc.application.port.out.ExecutionRepository;
+import com.iasdlc.application.port.out.InitiativeRepository;
 import com.iasdlc.application.port.out.PhaseRepository;
 import com.iasdlc.application.port.out.ProjectRepository;
 import com.iasdlc.application.port.out.SquadRepository;
@@ -12,6 +13,7 @@ import com.iasdlc.domain.exception.DomainException;
 import com.iasdlc.domain.model.Decision;
 import com.iasdlc.domain.model.Execution;
 import com.iasdlc.domain.model.ExecutionStatus;
+import com.iasdlc.domain.model.Initiative;
 import com.iasdlc.domain.model.Phase;
 import com.iasdlc.domain.model.PhaseCode;
 import com.iasdlc.domain.model.Project;
@@ -31,15 +33,18 @@ import java.util.UUID;
 public class ApprovalService implements ApprovalUseCase {
 
     private final ExecutionRepository executions;
+    private final InitiativeRepository initiatives;
     private final ProjectRepository projects;
     private final SquadRepository squads;
     private final PhaseRepository phases;
     private final Clock clock;
     private final ViewAssembler views;
 
-    public ApprovalService(ExecutionRepository executions, ProjectRepository projects, SquadRepository squads,
-                           PhaseRepository phases, UserRepository users, Clock clock) {
+    public ApprovalService(ExecutionRepository executions, InitiativeRepository initiatives,
+                           ProjectRepository projects, SquadRepository squads, PhaseRepository phases,
+                           UserRepository users, Clock clock) {
         this.executions = executions;
+        this.initiatives = initiatives;
         this.projects = projects;
         this.squads = squads;
         this.phases = phases;
@@ -55,9 +60,11 @@ public class ApprovalService implements ApprovalUseCase {
             if (execution.status() != ExecutionStatus.PENDING_APPROVAL) {
                 continue;
             }
-            Project project = projectOf(execution);
+            // El squad que aprueba es el del proyecto de la iniciativa.
+            Initiative initiative = initiativeOf(execution);
+            Project project = projectOf(initiative);
             if (GatePolicy.isApprover(squadOf(project), phaseOf(execution.phaseCode()), userId)) {
-                pending.add(views.execution(execution, project.name()));
+                pending.add(views.execution(execution, initiative, project));
             }
         }
         return pending;
@@ -67,26 +74,32 @@ public class ApprovalService implements ApprovalUseCase {
     public ExecutionView decide(UUID executionId, UUID userId, Decision decision, String comment) {
         Execution execution = executions.findById(executionId)
                 .orElseThrow(() -> DomainException.notFound("la ejecución"));
-        Project project = projectOf(execution);
+        Initiative initiative = initiativeOf(execution);
+        Project project = projectOf(initiative);
         Squad squad = squadOf(project);
         Phase phase = phaseOf(execution.phaseCode());
 
         // Última ejecución anterior de la fase con resultado vigente (vienen de la más reciente a la más antigua).
-        Optional<Execution> previousValid = executions.findByProjectId(project.id()).stream()
+        Optional<Execution> previousValid = executions.findByInitiativeId(initiative.id()).stream()
                 .filter(e -> !e.id().equals(execution.id()))
                 .filter(e -> e.phaseCode() == execution.phaseCode() && e.hasValidResult())
                 .findFirst();
 
-        GateDecisionService.decide(project, squad, phase, execution, userId, decision, comment,
+        GateDecisionService.decide(initiative, squad, phase, execution, userId, decision, comment,
                 clock.instant(), previousValid);
 
-        projects.save(project);
-        return views.execution(executions.save(execution), project.name());
+        initiatives.save(initiative);
+        return views.execution(executions.save(execution), initiative, project);
     }
 
-    private Project projectOf(Execution execution) {
-        return projects.findById(execution.projectId())
-                .orElseThrow(() -> new IllegalStateException("La ejecución apunta a un proyecto inexistente"));
+    private Initiative initiativeOf(Execution execution) {
+        return initiatives.findById(execution.initiativeId())
+                .orElseThrow(() -> new IllegalStateException("La ejecución apunta a una iniciativa inexistente"));
+    }
+
+    private Project projectOf(Initiative initiative) {
+        return projects.findById(initiative.projectId())
+                .orElseThrow(() -> new IllegalStateException("La iniciativa apunta a un proyecto inexistente"));
     }
 
     private Squad squadOf(Project project) {

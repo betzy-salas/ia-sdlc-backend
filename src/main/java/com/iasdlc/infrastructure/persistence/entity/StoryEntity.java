@@ -22,8 +22,8 @@ public class StoryEntity {
     UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "project_id", nullable = false)
-    ProjectEntity project;
+    @JoinColumn(name = "initiative_id", nullable = false)
+    InitiativeEntity initiative;
 
     @Column(nullable = false)
     String title;

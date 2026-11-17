@@ -8,13 +8,13 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Ejecución de un agente sobre un proyecto en una fase. Es un registro histórico:
+ * Ejecución de un agente sobre las historias de una iniciativa en una fase. Es un registro histórico:
  * no se edita ni se borra; solo avanza de estado (RUNNING -> PENDING_APPROVAL/FAILED -> decisión).
  */
 public class Execution {
 
     private final UUID id;
-    private final UUID projectId;
+    private final UUID initiativeId;
     private final PhaseCode phaseCode;
     private final UUID agentId;
     private final String agentName;
@@ -26,11 +26,11 @@ public class Execution {
     private GateDecision decision;
     private String failureReason;
 
-    public Execution(UUID id, UUID projectId, PhaseCode phaseCode, UUID agentId, String agentName,
+    public Execution(UUID id, UUID initiativeId, PhaseCode phaseCode, UUID agentId, String agentName,
                      String agentVersion, UUID launchedBy, ExecutionStatus status, Instant createdAt,
                      List<StoryRefinement> refinedStories, GateDecision decision, String failureReason) {
         this.id = id;
-        this.projectId = projectId;
+        this.initiativeId = initiativeId;
         this.phaseCode = phaseCode;
         this.agentId = agentId;
         this.agentName = agentName;
@@ -43,9 +43,9 @@ public class Execution {
         this.failureReason = failureReason;
     }
 
-    public static Execution start(UUID projectId, PhaseCode phaseCode, Agent agent, String agentVersion,
+    public static Execution start(UUID initiativeId, PhaseCode phaseCode, Agent agent, String agentVersion,
                                   UUID launchedBy, Instant now) {
-        return new Execution(UUID.randomUUID(), projectId, phaseCode, agent.id(), agent.name(), agentVersion,
+        return new Execution(UUID.randomUUID(), initiativeId, phaseCode, agent.id(), agent.name(), agentVersion,
                 launchedBy, ExecutionStatus.RUNNING, now, List.of(), null, null);
     }
 
@@ -98,7 +98,7 @@ public class Execution {
     }
 
     public UUID id() { return id; }
-    public UUID projectId() { return projectId; }
+    public UUID initiativeId() { return initiativeId; }
     public PhaseCode phaseCode() { return phaseCode; }
     public UUID agentId() { return agentId; }
     public String agentName() { return agentName; }

@@ -38,7 +38,9 @@ public class ExecutionPersistenceAdapter implements ExecutionRepository {
     }
 
     @Override
-    public List<Execution> findByProjectId(UUID projectId) {
-        return repository.findByProjectIdOrderByCreatedAtDesc(projectId).stream().map(mapper::toDomain).toList();
+    public List<Execution> findByInitiativeId(UUID initiativeId) {
+        return repository.findByInitiativeIdOrderByCreatedAtDesc(initiativeId).stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 }

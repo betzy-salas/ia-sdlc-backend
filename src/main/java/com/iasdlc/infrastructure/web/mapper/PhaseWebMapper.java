@@ -27,6 +27,6 @@ public final class PhaseWebMapper {
                 view.agents().stream()
                         .map(a -> new DashboardAgentResponse(a.id(), a.name(), a.status()))
                         .toList(),
-                view.projectsInPhase(), view.pendingApprovals());
+                view.initiativesInPhase(), view.pendingApprovals());
     }
 }

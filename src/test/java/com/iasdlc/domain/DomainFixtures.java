@@ -2,9 +2,9 @@ package com.iasdlc.domain;
 
 import com.iasdlc.domain.model.Agent;
 import com.iasdlc.domain.model.Execution;
+import com.iasdlc.domain.model.Initiative;
 import com.iasdlc.domain.model.Phase;
 import com.iasdlc.domain.model.PhaseCode;
-import com.iasdlc.domain.model.Project;
 import com.iasdlc.domain.model.RefinedStory;
 import com.iasdlc.domain.model.SquadRole;
 import com.iasdlc.domain.model.Story;
@@ -25,12 +25,12 @@ public final class DomainFixtures {
     private DomainFixtures() {
     }
 
-    public static Project projectWithStories(int count) {
-        Project project = Project.create("Proyecto demo", "Descripción", UUID.randomUUID(), NOW);
+    public static Initiative initiativeWithStories(int count) {
+        Initiative initiative = Initiative.create(UUID.randomUUID(), "Iniciativa demo", "Descripción", NOW);
         for (int i = 1; i <= count; i++) {
-            project.addStory("Historia " + i, "Descripción " + i, StoryOrigin.EXISTING, NOW);
+            initiative.addStory("Historia " + i, "Descripción " + i, StoryOrigin.EXISTING, NOW);
         }
-        return project;
+        return initiative;
     }
 
     public static Agent executableAgent() {
@@ -41,8 +41,8 @@ public final class DomainFixtures {
         return agent;
     }
 
-    public static List<StoryRefinement> refinementsFor(Project project, String marker) {
-        return project.stories().stream()
+    public static List<StoryRefinement> refinementsFor(Initiative initiative, String marker) {
+        return initiative.stories().stream()
                 .map(story -> new StoryRefinement(story.id(), story.title(), refined(marker + " " + story.title())))
                 .toList();
     }
@@ -52,17 +52,17 @@ public final class DomainFixtures {
                 List.of("Dado A, Cuando B, Entonces C"), List.of());
     }
 
-    /** Ejecución terminada (PENDING_APPROVAL) y ya reflejada en el proyecto (fase AWAITING_GATE). */
-    public static Execution pendingExecution(Project project, String marker) {
-        Execution execution = Execution.start(project.id(), PhaseCode.REQUIREMENTS, executableAgent(), "0.1.0",
+    /** Ejecución terminada (PENDING_APPROVAL) y ya reflejada en la iniciativa (fase AWAITING_GATE). */
+    public static Execution pendingExecution(Initiative initiative, String marker) {
+        Execution execution = Execution.start(initiative.id(), PhaseCode.REQUIREMENTS, executableAgent(), "0.1.0",
                 UUID.randomUUID(), NOW);
-        List<StoryRefinement> refinements = refinementsFor(project, marker);
+        List<StoryRefinement> refinements = refinementsFor(initiative, marker);
         execution.complete(refinements);
-        project.awaitGate(PhaseCode.REQUIREMENTS, refinements);
+        initiative.awaitGate(PhaseCode.REQUIREMENTS, refinements);
         return execution;
     }
 
-    public static Story firstStory(Project project) {
-        return project.stories().get(0);
+    public static Story firstStory(Initiative initiative) {
+        return initiative.stories().get(0);
     }
 }

@@ -8,8 +8,8 @@ import com.iasdlc.domain.model.Squad;
 import java.util.UUID;
 
 /**
- * Regla de quién aprueba un gate: un integrante del squad del proyecto con el rol
- * aprobador de la fase, sea titular o suplente.
+ * Regla de quién aprueba un gate: un integrante del squad (el del proyecto de la
+ * iniciativa) con el rol aprobador de la fase, sea titular o suplente.
  */
 public final class GatePolicy {
 

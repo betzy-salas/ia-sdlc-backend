@@ -17,6 +17,6 @@ public enum ErrorCode {
     PHASE_ALREADY_APPROVED,
     EXECUTION_ALREADY_DECIDED,
     DUPLICATE_NAME,
-    /** No está en el contrato: el usuario ya tiene ese rol en el squad. */
+    /** El usuario ya tiene ese rol en el squad. */
     DUPLICATE_MEMBER
 }

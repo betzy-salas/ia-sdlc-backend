@@ -59,7 +59,7 @@ class SimulatedAgentRunnerTest {
     void returnsOneResultPerStoryAndIsDeterministic() {
         UUID first = UUID.randomUUID();
         UUID second = UUID.randomUUID();
-        AgentInput input = new AgentInput(UUID.randomUUID(), "Proyecto", null, List.of(
+        AgentInput input = new AgentInput(UUID.randomUUID(), "Iniciativa", null, "Proyecto", List.of(
                 new AgentInput.StoryInput(first, "Pagar servicio", "Como cliente quiero pagar un servicio."),
                 new AgentInput.StoryInput(second, "Ver movimientos", "")));
 

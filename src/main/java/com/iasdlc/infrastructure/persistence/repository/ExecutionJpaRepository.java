@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface ExecutionJpaRepository extends JpaRepository<ExecutionEntity, UUID> {
     List<ExecutionEntity> findAllByOrderByCreatedAtDesc();
-    List<ExecutionEntity> findByProjectIdOrderByCreatedAtDesc(UUID projectId);
+    List<ExecutionEntity> findByInitiativeIdOrderByCreatedAtDesc(UUID initiativeId);
 }

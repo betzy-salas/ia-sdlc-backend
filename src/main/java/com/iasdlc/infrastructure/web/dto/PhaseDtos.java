@@ -21,7 +21,7 @@ public final class PhaseDtos {
 
     /** Elemento de GET /dashboard/phases. */
     public record DashboardPhaseResponse(PhaseCode phaseCode, int order, String name, SquadRole approverRole,
-                                         List<DashboardAgentResponse> agents, long projectsInPhase,
+                                         List<DashboardAgentResponse> agents, long initiativesInPhase,
                                          long pendingApprovals) {
     }
 

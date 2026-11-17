@@ -7,6 +7,8 @@ import com.iasdlc.application.view.MembershipView;
 import com.iasdlc.application.view.SquadView;
 import com.iasdlc.application.view.UserProfile;
 import com.iasdlc.domain.model.Execution;
+import com.iasdlc.domain.model.Initiative;
+import com.iasdlc.domain.model.Project;
 import com.iasdlc.domain.model.Squad;
 import com.iasdlc.domain.model.SquadMember;
 import com.iasdlc.domain.model.User;
@@ -51,7 +53,8 @@ final class ViewAssembler {
         return new SquadView(squad, userNames(ids));
     }
 
-    ExecutionView execution(Execution execution, String projectName) {
+    /** {@code initiative} y {@code project} son los de la ejecución (la iniciativa y el proyecto al que pertenece). */
+    ExecutionView execution(Execution execution, Initiative initiative, Project project) {
         Set<UUID> ids = new HashSet<>();
         ids.add(execution.launchedBy());
         if (execution.decision() != null) {
@@ -59,7 +62,8 @@ final class ViewAssembler {
         }
         Map<UUID, String> names = userNames(ids);
         String decidedBy = execution.decision() == null ? null : names.get(execution.decision().decidedBy());
-        return new ExecutionView(execution, projectName, names.get(execution.launchedBy()), decidedBy);
+        return new ExecutionView(execution, initiative.name(), project.id(), project.name(),
+                names.get(execution.launchedBy()), decidedBy);
     }
 
     private Map<UUID, String> userNames(Set<UUID> ids) {

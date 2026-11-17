@@ -11,7 +11,7 @@ import com.iasdlc.infrastructure.web.dto.ExecutionDtos.ExecutionAgentRef;
 import com.iasdlc.infrastructure.web.dto.ExecutionDtos.ExecutionResponse;
 import com.iasdlc.infrastructure.web.dto.ExecutionDtos.ExecutionSummaryResponse;
 import com.iasdlc.infrastructure.web.dto.ExecutionDtos.RefinedStoryItemResponse;
-import com.iasdlc.infrastructure.web.dto.ProjectDtos.RefinedStoryResponse;
+import com.iasdlc.infrastructure.web.dto.InitiativeDtos.RefinedStoryResponse;
 
 public final class ExecutionWebMapper {
 
@@ -20,8 +20,9 @@ public final class ExecutionWebMapper {
 
     public static ExecutionSummaryResponse toSummary(ExecutionView view) {
         Execution e = view.execution();
-        return new ExecutionSummaryResponse(e.id(), new NamedRef(e.projectId(), view.projectName()),
-                e.phaseCode(), new ExecutionAgentRef(e.agentId(), e.agentName(), e.agentVersion()),
+        return new ExecutionSummaryResponse(e.id(), new NamedRef(e.initiativeId(), view.initiativeName()),
+                new NamedRef(view.projectId(), view.projectName()), e.phaseCode(),
+                new ExecutionAgentRef(e.agentId(), e.agentName(), e.agentVersion()),
                 new PersonRef(e.launchedBy(), view.launchedByName()), e.status(), e.createdAt());
     }
 
@@ -32,7 +33,8 @@ public final class ExecutionWebMapper {
                 : new DecisionResponse(decision.decision(),
                         new PersonRef(decision.decidedBy(), view.decidedByName()),
                         decision.decidedAt(), decision.comment());
-        return new ExecutionResponse(e.id(), new NamedRef(e.projectId(), view.projectName()), e.phaseCode(),
+        return new ExecutionResponse(e.id(), new NamedRef(e.initiativeId(), view.initiativeName()),
+                new NamedRef(view.projectId(), view.projectName()), e.phaseCode(),
                 new ExecutionAgentRef(e.agentId(), e.agentName(), e.agentVersion()),
                 new PersonRef(e.launchedBy(), view.launchedByName()), e.status(), e.createdAt(),
                 e.refinedStories().stream()

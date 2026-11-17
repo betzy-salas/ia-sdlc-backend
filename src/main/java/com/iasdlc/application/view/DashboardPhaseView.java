@@ -5,5 +5,5 @@ import com.iasdlc.domain.model.Phase;
 
 import java.util.List;
 
-public record DashboardPhaseView(Phase phase, List<Agent> agents, long projectsInPhase, long pendingApprovals) {
+public record DashboardPhaseView(Phase phase, List<Agent> agents, long initiativesInPhase, long pendingApprovals) {
 }

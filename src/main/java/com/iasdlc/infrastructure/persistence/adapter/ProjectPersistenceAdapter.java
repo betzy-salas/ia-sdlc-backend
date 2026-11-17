@@ -23,7 +23,6 @@ public class ProjectPersistenceAdapter implements ProjectRepository {
 
     @Override
     public Project save(Project project) {
-        // save() hace merge del agregado completo: historias y avance por fase incluidos.
         return mapper.toDomain(repository.save(mapper.toEntity(project)));
     }
 

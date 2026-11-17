@@ -37,9 +37,12 @@ public class ExecutionController {
 
     @GetMapping("/executions")
     public List<ExecutionSummaryResponse> list(
+            @RequestParam(name = "initiativeId", required = false) UUID initiativeId,
             @RequestParam(name = "projectId", required = false) UUID projectId,
             @RequestParam(name = "status", required = false) ExecutionStatus status) {
-        return executions.listExecutions(projectId, status).stream().map(ExecutionWebMapper::toSummary).toList();
+        return executions.listExecutions(initiativeId, projectId, status).stream()
+                .map(ExecutionWebMapper::toSummary)
+                .toList();
     }
 
     @GetMapping("/executions/{executionId}")

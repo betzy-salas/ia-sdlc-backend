@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ExecutionUseCase {
-    /** Ejecuta el agente de la fase sobre las historias del proyecto (síncrono). */
-    ExecutionView runPhase(UUID projectId, PhaseCode phaseCode, UUID launchedBy);
+    /** Ejecuta el agente de la fase sobre las historias de la iniciativa (síncrono). */
+    ExecutionView runPhase(UUID initiativeId, PhaseCode phaseCode, UUID launchedBy);
     /** Lista ejecuciones; los filtros nulos no se aplican. */
-    List<ExecutionView> listExecutions(UUID projectId, ExecutionStatus status);
+    List<ExecutionView> listExecutions(UUID initiativeId, UUID projectId, ExecutionStatus status);
     ExecutionView getExecution(UUID executionId);
 }

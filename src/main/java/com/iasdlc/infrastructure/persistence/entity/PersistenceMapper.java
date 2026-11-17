@@ -7,6 +7,7 @@ import com.iasdlc.domain.model.Agent;
 import com.iasdlc.domain.model.AgentVersion;
 import com.iasdlc.domain.model.Execution;
 import com.iasdlc.domain.model.GateDecision;
+import com.iasdlc.domain.model.Initiative;
 import com.iasdlc.domain.model.Phase;
 import com.iasdlc.domain.model.Project;
 import com.iasdlc.domain.model.RefinedStory;
@@ -134,14 +135,30 @@ public class PersistenceMapper {
         entity.name = project.name();
         entity.description = project.description();
         entity.squadId = project.squadId();
-        entity.currentPhase = project.currentPhase();
         entity.createdAt = project.createdAt();
-        entity.phases = new HashMap<>(project.progress());
+        return entity;
+    }
+
+    public Project toDomain(ProjectEntity entity) {
+        return new Project(entity.id, entity.name, entity.description, entity.squadId, entity.createdAt);
+    }
+
+    // --- Iniciativas ------------------------------------------------------------------------
+
+    public InitiativeEntity toEntity(Initiative initiative) {
+        InitiativeEntity entity = new InitiativeEntity();
+        entity.id = initiative.id();
+        entity.projectId = initiative.projectId();
+        entity.name = initiative.name();
+        entity.description = initiative.description();
+        entity.currentPhase = initiative.currentPhase();
+        entity.createdAt = initiative.createdAt();
+        entity.phases = new HashMap<>(initiative.progress());
         int index = 0;
-        for (Story story : project.stories()) {
+        for (Story story : initiative.stories()) {
             StoryEntity storyEntity = new StoryEntity();
             storyEntity.id = story.id();
-            storyEntity.project = entity;
+            storyEntity.initiative = entity;
             storyEntity.title = story.title();
             storyEntity.description = story.description();
             storyEntity.origin = story.origin();
@@ -153,13 +170,13 @@ public class PersistenceMapper {
         return entity;
     }
 
-    public Project toDomain(ProjectEntity entity) {
+    public Initiative toDomain(InitiativeEntity entity) {
         List<Story> stories = entity.stories.stream()
                 .map(s -> new Story(s.id, s.title, s.description, s.origin,
                         s.refinedJson == null ? null : readJson(s.refinedJson, RefinedStory.class),
                         s.createdAt))
                 .toList();
-        return new Project(entity.id, entity.name, entity.description, entity.squadId, entity.currentPhase,
+        return new Initiative(entity.id, entity.projectId, entity.name, entity.description, entity.currentPhase,
                 entity.createdAt, stories, new HashMap<>(entity.phases));
     }
 
@@ -168,7 +185,7 @@ public class PersistenceMapper {
     public ExecutionEntity toEntity(Execution execution) {
         ExecutionEntity entity = new ExecutionEntity();
         entity.id = execution.id();
-        entity.projectId = execution.projectId();
+        entity.initiativeId = execution.initiativeId();
         entity.phaseCode = execution.phaseCode();
         entity.agentId = execution.agentId();
         entity.agentName = execution.agentName();
@@ -197,7 +214,7 @@ public class PersistenceMapper {
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("No se pudo leer el resultado guardado de la ejecución", e);
         }
-        return new Execution(entity.id, entity.projectId, entity.phaseCode, entity.agentId, entity.agentName,
+        return new Execution(entity.id, entity.initiativeId, entity.phaseCode, entity.agentId, entity.agentName,
                 entity.agentVersion, entity.launchedBy, entity.status, entity.createdAt, refinements, decision,
                 entity.failureReason);
     }

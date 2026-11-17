@@ -5,8 +5,8 @@ import com.iasdlc.domain.exception.ErrorCode;
 import com.iasdlc.domain.model.Decision;
 import com.iasdlc.domain.model.Execution;
 import com.iasdlc.domain.model.ExecutionStatus;
+import com.iasdlc.domain.model.Initiative;
 import com.iasdlc.domain.model.PhaseCode;
-import com.iasdlc.domain.model.Project;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -17,16 +17,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ExecutionTest {
 
-    private final Project project = DomainFixtures.projectWithStories(2);
+    private final Initiative initiative = DomainFixtures.initiativeWithStories(2);
     private final UUID approver = UUID.randomUUID();
 
     @Test
     void startsRunningAndCompletesAsPendingApproval() {
-        Execution execution = Execution.start(project.id(), PhaseCode.REQUIREMENTS,
+        Execution execution = Execution.start(initiative.id(), PhaseCode.REQUIREMENTS,
                 DomainFixtures.executableAgent(), "0.1.0", UUID.randomUUID(), NOW);
         assertThat(execution.status()).isEqualTo(ExecutionStatus.RUNNING);
 
-        execution.complete(DomainFixtures.refinementsFor(project, "v1"));
+        execution.complete(DomainFixtures.refinementsFor(initiative, "v1"));
 
         assertThat(execution.status()).isEqualTo(ExecutionStatus.PENDING_APPROVAL);
         assertThat(execution.refinedStories()).hasSize(2);
@@ -36,7 +36,7 @@ class ExecutionTest {
 
     @Test
     void failedExecutionKeepsTheReasonAndCannotBeDecided() {
-        Execution execution = Execution.start(project.id(), PhaseCode.REQUIREMENTS,
+        Execution execution = Execution.start(initiative.id(), PhaseCode.REQUIREMENTS,
                 DomainFixtures.executableAgent(), "0.1.0", UUID.randomUUID(), NOW);
 
         execution.fail("sin respuesta del motor");
@@ -51,7 +51,7 @@ class ExecutionTest {
 
     @Test
     void approveDoesNotNeedAComment() {
-        Execution execution = DomainFixtures.pendingExecution(project, "v1");
+        Execution execution = DomainFixtures.pendingExecution(initiative, "v1");
 
         execution.decide(Decision.APPROVE, approver, null, NOW);
 
@@ -63,7 +63,7 @@ class ExecutionTest {
 
     @Test
     void reworkAndRejectRequireAComment() {
-        Execution execution = DomainFixtures.pendingExecution(project, "v1");
+        Execution execution = DomainFixtures.pendingExecution(initiative, "v1");
 
         assertThatThrownBy(() -> execution.decide(Decision.REQUEST_REWORK, approver, "   ", NOW))
                 .isInstanceOf(DomainException.class)
@@ -78,12 +78,12 @@ class ExecutionTest {
 
     @Test
     void reworkAndRejectSetTheirStatus() {
-        Execution rework = DomainFixtures.pendingExecution(project, "v1");
+        Execution rework = DomainFixtures.pendingExecution(initiative, "v1");
         rework.decide(Decision.REQUEST_REWORK, approver, "Falta detalle", NOW);
         assertThat(rework.status()).isEqualTo(ExecutionStatus.REWORK_REQUESTED);
         assertThat(rework.hasValidResult()).isTrue();
 
-        Execution rejected = DomainFixtures.pendingExecution(project, "v2");
+        Execution rejected = DomainFixtures.pendingExecution(initiative, "v2");
         rejected.decide(Decision.REJECT, approver, "No aplica", NOW);
         assertThat(rejected.status()).isEqualTo(ExecutionStatus.REJECTED);
         assertThat(rejected.hasValidResult()).isFalse();
@@ -92,7 +92,7 @@ class ExecutionTest {
 
     @Test
     void aDecidedExecutionCannotBeDecidedAgain() {
-        Execution execution = DomainFixtures.pendingExecution(project, "v1");
+        Execution execution = DomainFixtures.pendingExecution(initiative, "v1");
         execution.decide(Decision.APPROVE, approver, null, NOW);
 
         assertThatThrownBy(() -> execution.decide(Decision.REJECT, approver, "cambio de opinión", NOW))

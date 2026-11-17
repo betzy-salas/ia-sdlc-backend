@@ -65,47 +65,61 @@ CREATE TABLE agent_versions (
     CONSTRAINT uk_agent_versions UNIQUE (agent_id, version)
 );
 
+-- Proyecto: lo estable (nombre, descripción y squad). No recorre fases.
 CREATE TABLE projects (
-    id            UUID PRIMARY KEY,
-    name          VARCHAR(150) NOT NULL,
-    description   TEXT,
-    squad_id      UUID NOT NULL,
-    current_phase VARCHAR(30) NOT NULL,
-    created_at    TIMESTAMP WITH TIME ZONE NOT NULL,
+    id          UUID PRIMARY KEY,
+    name        VARCHAR(150) NOT NULL,
+    description TEXT,
+    squad_id    UUID NOT NULL,
+    created_at  TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT fk_projects_squad FOREIGN KEY (squad_id) REFERENCES squads (id),
-    CONSTRAINT fk_projects_phase FOREIGN KEY (current_phase) REFERENCES phases (code),
     CONSTRAINT uk_projects_name UNIQUE (name)
 );
 
--- Avance de cada fase dentro de un proyecto.
-CREATE TABLE project_phases (
-    project_id UUID NOT NULL,
-    phase_code VARCHAR(30) NOT NULL,
-    progress   VARCHAR(20) NOT NULL,
-    CONSTRAINT pk_project_phases PRIMARY KEY (project_id, phase_code),
-    CONSTRAINT fk_project_phases_project FOREIGN KEY (project_id) REFERENCES projects (id),
-    CONSTRAINT fk_project_phases_phase FOREIGN KEY (phase_code) REFERENCES phases (code)
+-- Iniciativa: lote de trabajo dentro de un proyecto. Es la unidad que recorre las fases.
+-- Su squad es el del proyecto. El nombre es único dentro del proyecto.
+CREATE TABLE initiatives (
+    id            UUID PRIMARY KEY,
+    project_id    UUID NOT NULL,
+    name          VARCHAR(150) NOT NULL,
+    description   TEXT,
+    current_phase VARCHAR(30) NOT NULL,
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT fk_initiatives_project FOREIGN KEY (project_id) REFERENCES projects (id),
+    CONSTRAINT fk_initiatives_phase FOREIGN KEY (current_phase) REFERENCES phases (code),
+    CONSTRAINT uk_initiatives_project_name UNIQUE (project_id, name)
+);
+
+-- Avance de cada fase dentro de una iniciativa.
+CREATE TABLE initiative_phases (
+    initiative_id UUID NOT NULL,
+    phase_code    VARCHAR(30) NOT NULL,
+    progress      VARCHAR(20) NOT NULL,
+    CONSTRAINT pk_initiative_phases PRIMARY KEY (initiative_id, phase_code),
+    CONSTRAINT fk_initiative_phases_initiative FOREIGN KEY (initiative_id) REFERENCES initiatives (id),
+    CONSTRAINT fk_initiative_phases_phase FOREIGN KEY (phase_code) REFERENCES phases (code)
 );
 
 -- refined_json guarda la historia refinada vigente (JSON) o NULL.
 CREATE TABLE stories (
-    id           UUID PRIMARY KEY,
-    project_id   UUID NOT NULL,
-    title        VARCHAR(200) NOT NULL,
-    description  TEXT,
-    origin       VARCHAR(20) NOT NULL,
-    refined_json TEXT,
-    sort_index   INTEGER NOT NULL,
-    created_at   TIMESTAMP WITH TIME ZONE NOT NULL,
-    CONSTRAINT fk_stories_project FOREIGN KEY (project_id) REFERENCES projects (id)
+    id            UUID PRIMARY KEY,
+    initiative_id UUID NOT NULL,
+    title         VARCHAR(200) NOT NULL,
+    description   TEXT,
+    origin        VARCHAR(20) NOT NULL,
+    refined_json  TEXT,
+    sort_index    INTEGER NOT NULL,
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT fk_stories_initiative FOREIGN KEY (initiative_id) REFERENCES initiatives (id)
 );
 
 -- Registro histórico: las ejecuciones y sus decisiones no se borran.
+-- Cada ejecución pertenece a una iniciativa (el proyecto se obtiene a través de ella).
 -- refined_stories_json guarda el resultado del agente (JSON); no referencia a stories
 -- para conservar el resultado aunque luego se borre una historia.
 CREATE TABLE executions (
     id                   UUID PRIMARY KEY,
-    project_id           UUID NOT NULL,
+    initiative_id        UUID NOT NULL,
     phase_code           VARCHAR(30) NOT NULL,
     agent_id             UUID NOT NULL,
     agent_name           VARCHAR(120) NOT NULL,
@@ -119,14 +133,15 @@ CREATE TABLE executions (
     decided_by           UUID,
     decided_at           TIMESTAMP WITH TIME ZONE,
     decision_comment     TEXT,
-    CONSTRAINT fk_executions_project FOREIGN KEY (project_id) REFERENCES projects (id),
+    CONSTRAINT fk_executions_initiative FOREIGN KEY (initiative_id) REFERENCES initiatives (id),
     CONSTRAINT fk_executions_phase FOREIGN KEY (phase_code) REFERENCES phases (code),
     CONSTRAINT fk_executions_agent FOREIGN KEY (agent_id) REFERENCES agents (id),
     CONSTRAINT fk_executions_launched_by FOREIGN KEY (launched_by) REFERENCES users (id),
     CONSTRAINT fk_executions_decided_by FOREIGN KEY (decided_by) REFERENCES users (id)
 );
 
-CREATE INDEX ix_executions_project ON executions (project_id, created_at);
+CREATE INDEX ix_initiatives_project ON initiatives (project_id, created_at);
+CREATE INDEX ix_executions_initiative ON executions (initiative_id, created_at);
 CREATE INDEX ix_executions_status ON executions (status);
-CREATE INDEX ix_stories_project ON stories (project_id);
+CREATE INDEX ix_stories_initiative ON stories (initiative_id);
 CREATE INDEX ix_squad_members_user ON squad_members (user_id);

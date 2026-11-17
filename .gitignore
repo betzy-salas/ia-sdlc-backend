@@ -18,7 +18,7 @@ dependency-reduced-pom.xml
 .project
 .factorypath
 nbproject/
-out/
+/out/
 bin/
 
 # Sistema operativo y varios
